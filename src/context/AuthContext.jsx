@@ -70,7 +70,8 @@ const PERMS = {
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [role, setRole] = useState(ROLES.RECEPTIONIST);
+  // Default to admin so all sections are visible on first load.
+  const [role, setRole] = useState(ROLES.ADMIN);
 
   const value = useMemo(
     () => ({
