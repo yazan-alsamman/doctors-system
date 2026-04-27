@@ -1,0 +1,75 @@
+# MediFlow AI · Clinical Portal
+
+A **Smart Clinic Management System** (internal-only) built with strict **role-based access control (RBAC)**. Each role sees a focused, distraction-free interface tailored to its responsibilities.
+
+> Built from the **Clinical Clarity** design system (Manrope display + Inter body, soft medical blue palette, rounded geometry, ambient shadows).
+
+## Stack
+
+- **React 19** + **Vite**
+- **Tailwind CSS** (design tokens mapped 1:1 to the spec)
+- **Material UI** (theme + base components)
+- **Framer Motion** (page transitions, list reveals, drawer/modal motion, gauge animations)
+- **Recharts** (analytics)
+- **React Router** (route-level RBAC guards)
+- **Heroicons** (line iconography)
+
+## Run it
+
+```bash
+cd mediflow
+npm install
+npm run dev
+```
+
+Open the URL printed in the terminal (default `http://localhost:5173`).
+
+## Roles & how to switch
+
+A **role pill** is rendered in the topbar — click any of:
+
+- **Receptionist** (default) — fast workflow, AI Smart Booking, full bookings + patients + billing CRUD
+- **Doctor** — minimal UI, read-only schedule (filtered to their own bookings), patient notes only
+- **Admin** — full system access incl. Inventory, Reports, Settings
+
+Routes are guarded by `Protected` in `src/App.jsx` and the sidebar **dynamically rebuilds** per role. Disallowed routes redirect to a friendly _Restricted Area_ screen.
+
+## Project structure
+
+```
+src/
+  context/AuthContext.jsx      Role + permission map (single source of truth)
+  components/layout/           Sidebar, Topbar, AppLayout
+  components/ui/               StatCard, Chip
+  pages/                       Dashboard, Appointments, Patients, PatientDetail,
+                               Billing, Inventory, Reports, Settings, NotAllowed
+  data/mock.js                 Sample patients, appointments, invoices, inventory…
+  theme.js                     MUI theme aligned to the design system
+  index.css                    Tailwind + component classes (.btn-primary, .card, …)
+tailwind.config.js             Design tokens (colors, radii, shadows, animations)
+```
+
+## Permission matrix (excerpt)
+
+| Module       | Receptionist | Doctor       | Admin |
+| ------------ | ------------ | ------------ | ----- |
+| Dashboard    | ✓ (limited)  | ✓ (personal) | ✓     |
+| Appointments | full         | view-only    | full  |
+| Patients     | full CRUD    | view + notes | full  |
+| Billing      | create+view  | hidden       | full  |
+| Inventory    | hidden       | hidden       | full  |
+| Reports      | hidden       | hidden       | full  |
+| AI Booking   | ✓            | hidden       | ✓     |
+
+## Design tokens
+
+Matches the **Clinical Clarity** palette and typography exactly:
+
+- Surface: `#f7f9fb` (background) → `#ffffff` (cards)
+- Primary: `#005d90` / hover `#0077b6` / soft `#cde5ff`
+- Secondary (success): `#126c40` / soft `#a1f5bc`
+- Danger: `#ba1a1a` / soft `#ffdad6`
+- Radii: `0.5rem` / `1rem` / `2rem`
+- Shadows: ambient `0 4px 12px rgba(0,0,0,0.05)`, popover `0 12px 32px rgba(0,0,0,0.1)`
+
+All defined in `tailwind.config.js` so you can use `bg-primary`, `text-ink-mute`, `shadow-card`, `rounded-lg` consistently.
