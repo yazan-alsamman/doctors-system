@@ -4,6 +4,9 @@ export const STATUS_AR = {
   active: "نشط",
   inactive: "غير نشط",
   new: "جديد",
+  draft: "مسودة",
+  unpaid: "غير مدفوع",
+  partial: "دفع جزئي",
   paid: "مدفوعة",
   due: "مستحقة",
   overdue: "متأخرة",
@@ -44,7 +47,21 @@ export const COMMON_AR = {
 };
 
 export function fmtMoney(n) {
-  return `${n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ر.س`;
+  return `${n.toLocaleString("ar-SY-u-ca-gregory-nu-latn", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })} ل.س`;
+}
+
+export function fmtNumberAr(n, options = {}) {
+  return new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn", {
+    maximumFractionDigits: 0,
+    ...options,
+  }).format(Number(n) || 0);
+}
+
+export function fmtPercentAr(n) {
+  return `${fmtNumberAr(n)}٪`;
 }
 
 export function fmtTime(start) {
@@ -53,4 +70,11 @@ export function fmtTime(start) {
   const period = h >= 12 ? "م" : "ص";
   const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
   return `${display}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+export function fmtPatientFileId(id) {
+  const clean = String(id || "")
+    .trim()
+    .replace(/^#+/, "");
+  return clean ? `#${clean}` : "#—";
 }

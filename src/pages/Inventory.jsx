@@ -60,7 +60,11 @@ export default function Inventory() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
-                    className="border-t border-surface-low hover:bg-surface-low/60 transition"
+                    className={`border-t border-surface-low transition ${
+                      it.status === "critical"
+                        ? "inventory-row-critical"
+                        : "hover:bg-surface-low/60"
+                    }`}
                   >
                     <td className="px-5 py-4">
                       <div className="text-sm font-semibold text-ink">{it.name}</div>

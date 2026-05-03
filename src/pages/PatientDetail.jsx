@@ -15,16 +15,19 @@ import {
   BoldIcon,
   ItalicIcon,
   BookmarkSquareIcon,
+  SparklesIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { usePatients } from "../context/PatientsContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { fmtPatientFileId } from "../data/strings.js";
 import Chip from "../components/ui/Chip.jsx";
 
 const HISTORY = [
-  { date: "12 شوال 1446", title: "استئصال الزائدة الدودية بالمنظار", body: "أُجريت العملية بنجاح بواسطة د. السعيد. تم اتباع بروتوكول التعافي السريع. لم تُسجّل أي مضاعفات في موقع الجراحة.", tag: "مكتمل" },
-  { date: "5 شعبان 1446", title: "مراجعة فحص الأيض الشامل", body: "تم تشخيص نقص فيتامين د (18 نانوغرام/مل). وُصف كوليكالسيفيرول 50,000 وحدة دولية أسبوعياً لمدة 8 أسابيع.", tag: null },
-  { date: "20 رجب 1446", title: "تطعيم الإنفلونزا السنوي", body: "تم إعطاء الجرعة المعيارية رباعية التكافؤ في العضد الأيسر. لا توجد أعراض جانبية.", tag: null },
-  { date: "14 صفر 1446", title: "تعديل الوصفة الطبية", body: "تم إيقاف السيتيريزين. بدء استخدام بخاخ الفلوتيكازون الأنفي للحساسية الموسمية.", tag: null },
+  { date: "15 نيسان 2026", title: "استئصال الزائدة الدودية بالمنظار", body: "أُجريت العملية بنجاح بواسطة د. السعيد. تم اتباع بروتوكول التعافي السريع. لم تُسجّل أي مضاعفات في موقع الجراحة.", tag: "مكتمل" },
+  { date: "08 آذار 2026", title: "مراجعة فحص الأيض الشامل", body: "تم تشخيص نقص فيتامين د (18 نانوغرام/مل). وُصف كوليكالسيفيرول 50,000 وحدة دولية أسبوعياً لمدة 8 أسابيع.", tag: null },
+  { date: "20 شباط 2026", title: "تطعيم الإنفلونزا السنوي", body: "تم إعطاء الجرعة المعيارية رباعية التكافؤ في العضد الأيسر. لا توجد أعراض جانبية.", tag: null },
+  { date: "14 كانون الثاني 2026", title: "تعديل الوصفة الطبية", body: "تم إيقاف السيتيريزين. بدء استخدام بخاخ الفلوتيكازون الأنفي للحساسية الموسمية.", tag: null },
 ];
 
 export default function PatientDetail() {
@@ -34,6 +37,8 @@ export default function PatientDetail() {
   const patient = patients.find((p) => p.id === id) || patients[0];
   const [note, setNote] = useState("");
   const [tab, setTab] = useState("overview");
+  const [aiState, setAiState] = useState("idle"); // idle | typing | ready | error
+  const [aiSuggestion, setAiSuggestion] = useState("");
   const TABS = [
     { id: "overview", label: "نظرة عامة" },
     { id: "labs", label: "نتائج التحاليل" },
@@ -54,7 +59,7 @@ export default function PatientDetail() {
           </div>
           <div className="text-sm text-ink-mute mt-1">
             العمر: {patient.age} <span className="mx-1.5">•</span> فصيلة الدم: {patient.bloodType}
-            <span className="mx-1.5">•</span> رقم الملف: <span className="font-latin">#{patient.id}</span>
+            <span className="mx-1.5">•</span> رقم الملف: <span className="font-latin">{fmtPatientFileId(patient.id)}</span>
           </div>
         </div>
       </div>
@@ -123,7 +128,7 @@ export default function PatientDetail() {
                 transition={{ delay: i * 0.06 }}
                 className="ps-5 relative"
               >
-                <span className="absolute -start-[9px] top-1.5 w-4 h-4 rounded-full bg-primary-soft border-4 border-white" />
+                <span className="absolute -start-[9px] top-1.5 w-4 h-4 rounded-full bg-primary-soft border-4 border-surface-base" />
                 <div className="flex items-center gap-2">
                   <span className="label-caps">{h.date}</span>
                   {h.tag && <Chip tone="ok">{h.tag}</Chip>}
@@ -142,6 +147,36 @@ export default function PatientDetail() {
             </h3>
             <Chip tone="ok">حفظ تلقائي للمسودة</Chip>
           </div>
+
+          <AiNoteHelper
+            note={note}
+            canUse={can("patients.notes")}
+            state={aiState}
+            suggestion={aiSuggestion}
+            onGenerate={() => {
+              if (!note.trim()) {
+                setAiState("error");
+                setAiSuggestion("أضف ملاحظات أولية أولًا ثم اطلب تحسين الصياغة.");
+                return;
+              }
+              setAiState("typing");
+              setAiSuggestion("");
+              setTimeout(() => {
+                const short = note.replace(/\s+/g, " ").trim();
+                const cleaned = short.length > 230 ? `${short.slice(0, 230)}...` : short;
+                setAiSuggestion(`ملخص سريري منسّق:\n- الحالة العامة مستقرة.\n- ملخص الملاحظة: ${cleaned}\n- الخطة: متابعة خلال 7 أيام أو حسب الحاجة.`);
+                setAiState("ready");
+              }, 950);
+            }}
+            onApply={() => {
+              if (!aiSuggestion.trim()) return;
+              setNote(aiSuggestion);
+            }}
+            onReset={() => {
+              setAiState("idle");
+              setAiSuggestion("");
+            }}
+          />
 
           <div className="flex items-center gap-1 mb-3 text-ink-mute">
             <ToolBtn><BoldIcon className="w-4 h-4" /></ToolBtn>
@@ -164,7 +199,7 @@ export default function PatientDetail() {
                 ? "وثّق الملاحظات السريرية والتقييم وخطة المتابعة..."
                 : "للقراءة فقط — يستطيع الأطباء والمدراء فقط إضافة ملاحظات."
             }
-            className="w-full rounded-lg border border-surface-high bg-surface-low/40 px-4 py-3 text-sm text-ink placeholder:text-ink-mute focus:outline-none focus:border-primary focus:bg-white transition resize-none disabled:opacity-60"
+            className="w-full rounded-lg border border-surface-high bg-surface-low/40 px-4 py-3 text-sm text-ink placeholder:text-ink-mute focus:outline-none focus:border-primary transition resize-none disabled:opacity-60"
           />
 
           <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
@@ -245,4 +280,50 @@ function Vital({ label, value, unit }) {
 
 function ToolBtn({ children }) {
   return <button className="w-8 h-8 rounded-md hover:bg-surface-low grid place-items-center">{children}</button>;
+}
+
+function AiNoteHelper({ note, canUse, state, suggestion, onGenerate, onApply, onReset }) {
+  const tone =
+    state === "error"
+      ? "border-danger/30 bg-danger-soft/20"
+      : state === "ready"
+      ? "border-secondary/30 bg-secondary-soft/20"
+      : "border-primary/30 bg-primary-soft/20";
+  return (
+    <div className={`rounded-lg border ${tone} p-3 mb-3`}>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <SparklesIcon className="w-4 h-4 text-primary" />
+          <span className="text-xs font-semibold text-ink">AI Note Helper</span>
+          <span className="chip bg-surface-base/80 text-ink-mute">
+            {state === "typing" ? "typing" : state === "ready" ? "ready" : state === "error" ? "error" : "idle"}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button disabled={!canUse} onClick={onGenerate} className="btn-ghost h-8 px-3 text-xs disabled:opacity-50">
+            تحسين الصياغة
+          </button>
+          <button disabled={!canUse || state !== "ready"} onClick={onApply} className="btn-primary h-8 px-3 text-xs disabled:opacity-50">
+            تطبيق
+          </button>
+          <button onClick={onReset} className="btn-ghost h-8 px-3 text-xs">مسح</button>
+        </div>
+      </div>
+      {state === "typing" && <div className="text-xs text-ink-mute mt-2">جارٍ توليد صياغة سريرية مختصرة...</div>}
+      {state === "error" && (
+        <div className="flex items-center gap-1.5 text-xs text-danger mt-2">
+          <ExclamationCircleIcon className="w-4 h-4" />
+          {suggestion}
+        </div>
+      )}
+      {state === "ready" && (
+        <div className="mt-2 rounded-md bg-surface-base/70 border border-surface-high p-2.5 whitespace-pre-line text-xs text-ink-variant">
+          {suggestion}
+        </div>
+      )}
+      {state === "idle" && note.trim().length > 0 && (
+        <div className="text-xs text-ink-mute mt-2">يمكنك تحسين الملاحظة الحالية بنقرة واحدة.</div>
+      )}
+    </div>
+  );
 }

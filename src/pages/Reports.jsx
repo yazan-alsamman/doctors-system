@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownTrayIcon,
   ChartBarIcon,
@@ -17,13 +18,82 @@ import {
   Tooltip,
   BarChart,
   Bar,
+  LabelList,
 } from "recharts";
-import { REVENUE, STAFF } from "../data/mock.js";
+import { DOCTORS, REVENUE, STAFF } from "../data/mock.js";
 import { STATUS_AR } from "../data/strings.js";
 import StatCard from "../components/ui/StatCard.jsx";
 import Chip from "../components/ui/Chip.jsx";
+import DualToneIcon from "../components/ui/DualToneIcon.jsx";
+import { useChartTheme } from "../hooks/useChartTheme.js";
+import { useAppointments } from "../context/AppointmentsContext.jsx";
 
 export default function Reports() {
+  const [loading, setLoading] = useState(true);
+  const chartTheme = useChartTheme();
+  const { items: appointments } = useAppointments();
+
+  const deptVolume = useMemo(() => {
+    const seed = [
+      { dept: "قلب", v: 0 },
+      { dept: "أعصاب", v: 0 },
+      { dept: "أطفال", v: 0 },
+      { dept: "باطنية", v: 0 },
+      { dept: "أشعة", v: 0 },
+    ];
+    const lookup = new Map(seed.map((d) => [d.dept, d]));
+    for (const appt of appointments) {
+      const doctor = DOCTORS.find((d) => d.id === appt.doctor);
+      if (!doctor) continue;
+      const deptName = doctor.dept.includes("القلب")
+        ? "قلب"
+        : doctor.dept.includes("الأعصاب")
+        ? "أعصاب"
+        : doctor.dept.includes("الأطفال")
+        ? "أطفال"
+        : doctor.dept.includes("الباطنية")
+        ? "باطنية"
+        : doctor.dept.includes("الأشعة")
+        ? "أشعة"
+        : null;
+      if (deptName && lookup.has(deptName)) {
+        lookup.get(deptName).v += 1;
+      }
+    }
+    return seed.map((entry) => ({ ...entry, v: entry.v || 0 }));
+  }, [appointments]);
+
+  const staffWithPressure = useMemo(() => {
+    const statusWeight = {
+      confirmed: 4,
+      arrived: 6,
+      in_consultation: 8,
+      completed: 3,
+      paid: 1,
+      scheduled: 2,
+    };
+    return STAFF.map((staff) => {
+      const doctor = DOCTORS.find((d) => d.name === staff.name);
+      const relevant = appointments.filter((appt) =>
+        doctor ? appt.doctor === doctor.id : DOCTORS.find((d) => d.id === appt.doctor)?.dept === staff.dept
+      );
+      const weightedLoad = relevant.reduce((sum, appt) => {
+        const urgencyBoost = appt.urgent ? 8 : 0;
+        const overbookedBoost = appt.overbooked ? 10 : 0;
+        return sum + (statusWeight[appt.status] || 2) + urgencyBoost + overbookedBoost;
+      }, 0);
+      const predictedLoad = Math.min(100, Math.round(staff.load * 0.6 + weightedLoad));
+      const pressureLabel =
+        predictedLoad >= 90 ? "حرج" : predictedLoad >= 70 ? "مرتفع" : predictedLoad >= 45 ? "متوسط" : "مستقر";
+      return { ...staff, predictedLoad, pressureLabel };
+    });
+  }, [appointments]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setLoading(false), 900);
+    return () => clearTimeout(id);
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
@@ -37,7 +107,7 @@ export default function Reports() {
         <div className="flex items-center gap-2">
           <button className="btn-ghost">آخر 30 يوم</button>
           <button className="btn-primary">
-            <ArrowDownTrayIcon className="w-4 h-4" /> تصدير التقرير
+            <DualToneIcon icon={ArrowDownTrayIcon} className="w-4 h-4" primaryClass="text-white" secondaryClass="text-white/45" /> تصدير التقرير
           </button>
         </div>
       </div>
@@ -62,16 +132,42 @@ export default function Reports() {
             </div>
           </div>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={REVENUE}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eceef0" />
-                <XAxis dataKey="month" tick={{ fill: "#707881", fontSize: 11 }} axisLine={false} tickLine={false} reversed />
-                <YAxis tick={{ fill: "#707881", fontSize: 12 }} axisLine={false} tickLine={false} orientation="right" />
-                <Tooltip />
-                <Line type="monotone" dataKey="2026" stroke="#005d90" strokeWidth={3} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="2025" stroke="#bfc7d1" strokeWidth={2} strokeDasharray="4 4" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            {loading ? (
+              <ChartSkeleton />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={REVENUE}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.cartesianGrid} />
+                  <XAxis dataKey="month" tick={{ fill: chartTheme.axisTick, fontSize: 11 }} axisLine={false} tickLine={false} reversed />
+                  <YAxis tick={{ fill: chartTheme.axisTick, fontSize: 12 }} axisLine={false} tickLine={false} orientation="right" />
+                  <Tooltip
+                    contentStyle={chartTheme.tooltipStyle}
+                    labelStyle={chartTheme.tooltipLabelStyle}
+                    itemStyle={chartTheme.tooltipItemStyle}
+                    wrapperStyle={chartTheme.tooltipWrapperStyle}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="2026"
+                    stroke={chartTheme.linePrimary}
+                    strokeWidth={3}
+                    dot={chartTheme.linePrimaryDot}
+                    activeDot={chartTheme.linePrimaryActiveDot}
+                    isAnimationActive
+                    animationDuration={1400}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="2025"
+                    stroke={chartTheme.lineSecondary}
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    dot={false}
+                    activeDot={chartTheme.lineSecondaryActiveDot}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -96,18 +192,25 @@ export default function Reports() {
             <h3 className="h3 mb-3">حجم المرضى حسب القسم</h3>
             <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[
-                  { dept: "قلب", v: 240 },
-                  { dept: "أعصاب", v: 180 },
-                  { dept: "أطفال", v: 220 },
-                  { dept: "باطنية", v: 198 },
-                  { dept: "أشعة", v: 80 },
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#eceef0" vertical={false} />
-                  <XAxis dataKey="dept" tick={{ fill: "#707881", fontSize: 11 }} axisLine={false} tickLine={false} reversed />
+                <BarChart data={deptVolume}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.cartesianGrid} vertical={false} />
+                  <XAxis dataKey="dept" tick={{ fill: chartTheme.axisTick, fontSize: 11 }} axisLine={false} tickLine={false} reversed />
                   <YAxis hide />
-                  <Tooltip />
-                  <Bar dataKey="v" fill="#005d90" radius={[6, 6, 0, 0]} />
+                  <Tooltip
+                    contentStyle={chartTheme.tooltipStyle}
+                    labelStyle={chartTheme.tooltipLabelStyle}
+                    itemStyle={chartTheme.tooltipItemStyle}
+                    wrapperStyle={chartTheme.tooltipWrapperStyle}
+                  />
+                  <Bar dataKey="v" fill={chartTheme.barPrimary} radius={[6, 6, 0, 0]} isAnimationActive animationDuration={1200}>
+                    <LabelList
+                      dataKey="v"
+                      position="top"
+                      formatter={(value) => `${value}`}
+                      fill={chartTheme.axisTick}
+                      fontSize={11}
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -129,7 +232,10 @@ export default function Reports() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full">
+          {loading ? (
+            <TableSkeleton />
+          ) : (
+            <table className="min-w-full lux-table">
             <thead>
               <tr>
                 <Th>الطبيب</Th>
@@ -140,7 +246,7 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody>
-              {STAFF.map((s, i) => (
+              {staffWithPressure.map((s, i) => (
                 <motion.tr
                   key={s.id}
                   initial={{ opacity: 0, y: 6 }}
@@ -171,20 +277,22 @@ export default function Reports() {
                       <div className="flex-1 h-1.5 bg-surface-mid rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${s.load}%` }}
+                          animate={{ width: `${s.predictedLoad}%` }}
                           transition={{ duration: 0.8, delay: i * 0.05 }}
                           className={`h-full rounded-full ${
-                            s.load >= 90 ? "bg-danger" : s.load >= 70 ? "bg-primary" : "bg-secondary"
+                            s.predictedLoad >= 90 ? "bg-danger" : s.predictedLoad >= 70 ? "bg-primary" : "bg-secondary"
                           }`}
                         />
                       </div>
-                      <span className="text-xs font-semibold text-ink-mute w-9 text-end font-latin">{s.load}٪</span>
+                      <span className="text-xs font-semibold text-ink-mute w-9 text-end font-latin">{s.predictedLoad}٪</span>
                     </div>
+                    <div className="text-[11px] text-ink-mute mt-1">{s.pressureLabel}</div>
                   </td>
                 </motion.tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          )}
         </div>
       </div>
     </div>
@@ -193,4 +301,34 @@ export default function Reports() {
 
 function Th({ children, className = "" }) {
   return <th className={`px-5 py-3 label-caps text-start ${className}`}>{children}</th>;
+}
+
+function ChartSkeleton() {
+  return (
+    <div className="h-full rounded-xl border border-surface-high bg-surface-base/70 p-4 flex flex-col">
+      <div className="h-4 w-40 rounded skeleton-shimmer mb-4" />
+      <div className="flex-1 rounded-lg skeleton-shimmer" />
+      <div className="mt-4 grid grid-cols-6 gap-2">
+        {[1, 2, 3, 4, 5, 6].map((k) => (
+          <div key={k} className="h-3 rounded skeleton-shimmer" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[1, 2, 3, 4, 5].map((row) => (
+        <div key={row} className="grid grid-cols-5 gap-3 p-3 rounded-lg border border-surface-high bg-surface-base/70">
+          <div className="h-4 rounded skeleton-shimmer" />
+          <div className="h-4 rounded skeleton-shimmer" />
+          <div className="h-4 rounded skeleton-shimmer" />
+          <div className="h-4 rounded skeleton-shimmer" />
+          <div className="h-4 rounded skeleton-shimmer" />
+        </div>
+      ))}
+    </div>
+  );
 }

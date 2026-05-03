@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { gsap } from "gsap";
 import {
   SparklesIcon,
   ArrowLeftIcon,
@@ -27,12 +28,19 @@ const PLACEHOLDER_LOOP = [
   "مثال: استشارة قلب عاجلة لسارة العتيبي مع د. هدى",
 ];
 
-export default function AiBookingCard() {
+export default function AiBookingCard({
+  onMagicPreview,
+  onMagicClear,
+  onDraftChange,
+  inputId = "ai-booking-input",
+}) {
   const [text, setText] = useState("");
   const [parsing, setParsing] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [successFx, setSuccessFx] = useState(false);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const { addAppointment } = useAppointments();
+  const [aiActive, setAiActive] = useState(false);
 
   // Cycle placeholder when input is empty
   useEffect(() => {
@@ -41,15 +49,28 @@ export default function AiBookingCard() {
     return () => clearInterval(id);
   }, [text]);
 
+  useEffect(() => {
+    onDraftChange?.(text);
+  }, [text, onDraftChange]);
+
   const livePreview = useMemo(() => (text.length > 6 ? parse(text) : null), [text]);
 
   const onAnalyze = () => {
     if (!text.trim()) return;
     setParsing(true);
+    setAiActive(true);
+    gsap.fromTo(
+      ".ai-card",
+      { boxShadow: "0 0 0 rgba(0,0,0,0)" },
+      { boxShadow: "0 0 0 8px rgba(11,167,173,0.12), 0 18px 35px rgba(11,167,173,0.18)", duration: 0.25, yoyo: true, repeat: 1 }
+    );
     setTimeout(() => {
+      const parsed = parse(text);
       setParsing(false);
-      setPreview(parse(text));
-    }, 700);
+      setAiActive(false);
+      setPreview(parsed);
+      onMagicPreview?.(parsed);
+    }, 1150);
   };
 
   return (
@@ -57,14 +78,14 @@ export default function AiBookingCard() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="ai-card rounded-xl"
+        className="ai-card rounded-2xl shadow-card"
       >
         <div className="p-5 md:p-6">
           <div className="flex items-start gap-3 flex-wrap">
             <motion.div
-              animate={{ rotate: [0, 8, -6, 0] }}
+              animate={{ y: [0, -2, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="w-11 h-11 rounded-lg bg-primary text-white grid place-items-center shadow-card"
+              className="w-11 h-11 rounded-lg bg-primary text-white grid place-items-center shadow-card overflow-hidden"
             >
               <SparklesIcon className="w-5 h-5" />
             </motion.div>
@@ -82,6 +103,7 @@ export default function AiBookingCard() {
           <div className="mt-4 flex items-stretch gap-2 flex-wrap md:flex-nowrap">
             <div className="flex-1 min-w-[260px] relative">
               <textarea
+                id={inputId}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
@@ -92,7 +114,9 @@ export default function AiBookingCard() {
                 }}
                 rows={2}
                 placeholder={PLACEHOLDER_LOOP[placeholderIdx]}
-                className="w-full rounded-lg border border-surface-high bg-white/90 px-4 py-3 text-sm text-ink placeholder:text-ink-mute focus:outline-none focus:border-primary focus:shadow-focus transition resize-none"
+                className={`w-full rounded-xl border border-surface-high magic-input px-4 py-3 text-sm text-ink placeholder:text-ink-mute focus:outline-none focus:border-primary focus:shadow-glow transition resize-none ${
+                  parsing ? "ai-processing-border" : ""
+                }`}
               />
               {livePreview && (
                 <motion.div
@@ -115,12 +139,12 @@ export default function AiBookingCard() {
             >
               {parsing ? (
                 <>
-                  <motion.span
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                    className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full"
-                  />
-                  جارٍ التحليل
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse [animation-delay:140ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse [animation-delay:280ms]" />
+                  </span>
+                  يعالج الطلب
                 </>
               ) : (
                 <>
@@ -130,6 +154,20 @@ export default function AiBookingCard() {
               )}
             </button>
           </div>
+          {aiActive && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-2 h-1 rounded-full overflow-hidden bg-primary-soft/70"
+            >
+              <motion.div
+                className="h-full bg-gradient-to-r from-primary via-secondary to-primary"
+                animate={{ x: ["-100%", "100%"] }}
+                transition={{ repeat: Infinity, duration: 1.1, ease: "linear" }}
+              />
+            </motion.div>
+          )}
 
           <div className="mt-4">
             <div className="label-caps mb-2">جرّب أحد الأمثلة السريعة:</div>
@@ -155,21 +193,46 @@ export default function AiBookingCard() {
         {preview && (
           <PreviewModal
             preview={preview}
-            onClose={() => setPreview(null)}
+            onClose={() => {
+              setPreview(null);
+              onMagicClear?.();
+            }}
             onConfirm={(edited) => {
-              addAppointment({
+              const result = addAppointment({
                 patient: edited.patient,
                 doctor: edited.doctorId,
                 day: edited.day,
                 start: edited.start,
                 duration: edited.duration,
                 reason: edited.reason,
+                visitType: edited.visitType || edited.reason,
                 urgent: edited.urgent,
-              });
+              }, edited.confirmOptions || {});
+              if (!result?.ok) return result;
               setPreview(null);
               setText("");
+              setSuccessFx(true);
+              setTimeout(() => setSuccessFx(false), 1400);
+              onMagicClear?.();
+              return result;
             }}
+            onLiveEdit={(draft) => onMagicPreview?.(draft)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {successFx && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.88 }}
+            transition={{ type: "spring", stiffness: 460, damping: 20, mass: 0.7 }}
+            className="fixed bottom-6 end-6 z-[60] px-4 py-2 rounded-xl bg-surface-base shadow-pop border border-secondary/30 flex items-center gap-2 dark-glass-panel"
+          >
+            <CheckCircleIcon className="w-5 h-5 text-secondary" />
+            <span className="text-sm font-semibold text-ink">تم الحجز بنجاح</span>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
@@ -180,16 +243,37 @@ function Tag({ color = "blue", children }) {
   const map = {
     blue: "bg-primary-soft text-primary",
     green: "bg-secondary-soft text-secondary",
-    purple: "bg-[#ede9fe] text-[#6d28d9]",
-    orange: "bg-[#fff1d6] text-[#b45309]",
+    purple: "bg-tertiary-soft/45 text-tertiary",
+    orange: "bg-warn-soft/45 text-warn",
     red: "bg-danger-soft text-danger",
   };
   return <span className={`${map[color]} px-2 py-0.5 rounded-full font-semibold`}>{children}</span>;
 }
 
-function PreviewModal({ preview, onClose, onConfirm }) {
+function PreviewModal({ preview, onClose, onConfirm, onLiveEdit }) {
   const [form, setForm] = useState(preview);
+  const [overrideConflict, setOverrideConflict] = useState(false);
+  const [repeatOverbookConfirm, setRepeatOverbookConfirm] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const doctorName = DOCTORS.find((d) => d.id === form.doctorId)?.name || form.doctorName;
+  const { getConflictsForDraft } = useAppointments();
+  const conflictInfo = useMemo(
+    () =>
+      getConflictsForDraft({
+        day: form.day,
+        start: form.start,
+        duration: form.duration,
+        doctor: form.doctorId,
+        visitType: form.visitType || form.reason,
+        reason: form.reason,
+      }),
+    [form, getConflictsForDraft]
+  );
+  const hasConflict = conflictInfo.conflicts.length > 0;
+
+  useEffect(() => {
+    onLiveEdit?.(form);
+  }, [form, onLiveEdit]);
 
   return (
     <motion.div
@@ -201,7 +285,7 @@ function PreviewModal({ preview, onClose, onConfirm }) {
     >
       <motion.div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-xl shadow-pop max-w-lg w-full overflow-hidden"
+        className="bg-surface-base rounded-xl shadow-pop max-w-lg w-full overflow-hidden card-modal dark-glass-panel"
         initial={{ y: 20, scale: 0.96, opacity: 0 }}
         animate={{ y: 0, scale: 1, opacity: 1 }}
         exit={{ y: 10, opacity: 0 }}
@@ -220,7 +304,15 @@ function PreviewModal({ preview, onClose, onConfirm }) {
         </div>
 
         <div className="px-6 pb-6">
-          <div className="rounded-lg border border-surface-high p-4 space-y-3">
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+            }}
+            className="rounded-lg border border-surface-high p-4 space-y-3"
+          >
             <EditableRow icon={UserIcon} label="المريض" confidence={preview.conf.patient}>
               <input
                 className="input h-9"
@@ -234,6 +326,17 @@ function PreviewModal({ preview, onClose, onConfirm }) {
                 value={form.reason}
                 onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
               />
+            </EditableRow>
+            <EditableRow icon={ClipboardDocumentListIcon} label="نوع الزيارة" confidence={preview.conf.reason}>
+              <select
+                className="input h-9"
+                value={form.visitType || form.reason}
+                onChange={(e) => setForm((f) => ({ ...f, visitType: e.target.value }))}
+              >
+                {["فحص عام", "متابعة", "استشارة", "استشارة جراحية", "جلسة علاج طبيعي", "تنظيف أسنان"].map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
             </EditableRow>
             <EditableRow icon={CalendarDaysIcon} label="اليوم" confidence={preview.conf.day}>
               <select
@@ -292,14 +395,81 @@ function PreviewModal({ preview, onClose, onConfirm }) {
               />
               <span className="text-sm text-ink">حالة عاجلة</span>
             </label>
-          </div>
-          <div className="mt-4 p-3 rounded-lg bg-secondary-soft/50 text-sm text-ink-variant flex gap-2">
-            <CheckCircleIcon className="w-5 h-5 text-secondary shrink-0" />
-            الموعد متاح للطبيب {doctorName}. لم يتم اكتشاف أي تعارض مع الحجوزات الحالية.
-          </div>
+          </motion.div>
+          {hasConflict ? (
+            <div className="mt-4 p-3 rounded-lg border border-danger/40 bg-danger-soft/60 text-sm text-ink-variant space-y-2">
+              <div className="flex gap-2">
+                <CheckCircleIcon className="w-5 h-5 text-danger shrink-0" />
+                <div>
+                  هذا الوقت محجوز لـ {doctorName}. سيتم تمييز الموعد كـ overbooked عند المتابعة.
+                </div>
+              </div>
+              {conflictInfo.suggestedStart != null && (
+                <button
+                  className="btn-ghost h-8 px-3 text-xs"
+                  onClick={() => {
+                    setForm((f) => ({ ...f, start: conflictInfo.suggestedStart }));
+                    setSubmitError("");
+                  }}
+                >
+                  أقرب وقت متاح: {fmtTime(conflictInfo.suggestedStart)}
+                </button>
+              )}
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-warn"
+                  checked={overrideConflict}
+                  onChange={(e) => setOverrideConflict(e.target.checked)}
+                />
+                متابعة الحجز رغم التعارض
+              </label>
+              {overrideConflict && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-danger"
+                    checked={repeatOverbookConfirm}
+                    onChange={(e) => setRepeatOverbookConfirm(e.target.checked)}
+                  />
+                  أؤكد مجددًا عند تكرار overbooking بنفس الخانة
+                </label>
+              )}
+            </div>
+          ) : (
+            <div className="mt-4 p-3 rounded-lg bg-secondary-soft/50 text-sm text-ink-variant flex gap-2">
+              <CheckCircleIcon className="w-5 h-5 text-secondary shrink-0" />
+              الموعد متاح للطبيب {doctorName}. لم يتم اكتشاف أي تعارض مع الحجوزات الحالية.
+            </div>
+          )}
+          {submitError && <div className="mt-2 text-xs text-danger font-semibold">{submitError}</div>}
           <div className="flex justify-end gap-2 mt-5">
             <button onClick={onClose} className="btn-ghost">رجوع</button>
-            <button onClick={() => onConfirm(form)} className="btn-primary">تأكيد بعد التعديل</button>
+            <button
+              onClick={() => {
+                if (hasConflict && !overrideConflict) {
+                  setSubmitError("يلزم تأكيد الحجز فوق الطاقة قبل الإرسال.");
+                  return;
+                }
+                const result = onConfirm({
+                  ...form,
+                  confirmOptions: {
+                    allowOverride: hasConflict,
+                    confirmRepeatedOverbook: repeatOverbookConfirm,
+                  },
+                });
+                if (result?.ok === false) {
+                  if (result.code === "REQUIRES_REPEAT_CONFIRMATION") {
+                    setSubmitError("هذه الخانة مزدحمة بالفعل بـ overbooking. فعّل التأكيد الثاني.");
+                  } else {
+                    setSubmitError("تعذر تثبيت الموعد بسبب التعارض.");
+                  }
+                }
+              }}
+              className="btn-primary"
+            >
+              تأكيد بعد التعديل
+            </button>
           </div>
         </div>
       </motion.div>
@@ -309,7 +479,10 @@ function PreviewModal({ preview, onClose, onConfirm }) {
 
 function EditableRow({ icon: Icon, label, confidence, children }) {
   return (
-    <div className="space-y-2">
+    <motion.div
+      variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }}
+      className="space-y-2"
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-lg bg-surface-low text-ink-mute grid place-items-center">
@@ -320,7 +493,7 @@ function EditableRow({ icon: Icon, label, confidence, children }) {
         <ConfBadge level={confidence} />
       </div>
       {children}
-    </div>
+    </motion.div>
   );
 }
 
@@ -332,7 +505,6 @@ function ConfBadge({ level }) {
 
 // ─── Naive Arabic NLP parser (demo) ─────────────────────────────────────────
 function parse(text) {
-  const t = text.toLowerCase();
   const conf = {};
 
   // Patient — match any known patient name partial OR fallback to "name"
@@ -379,7 +551,7 @@ function parse(text) {
   let day = 0;
   let dayLabel = DAYS_AR[0].label;
   conf.day = "low";
-  if (/غد(اً|ا)?/.test(text)) {
+  if (/غد(اً|ا)?|بكرا|بكرة/.test(text)) {
     day = 1;
     dayLabel = "غداً (" + DAYS_AR[1].label + ")";
     conf.day = "high";
@@ -425,6 +597,7 @@ function parse(text) {
   const reasons = [
     [/فحص(\s+عام)?/, "فحص عام"],
     [/فحص\s+نظر/, "فحص نظر"],
+    [/ليزر/, "جلسة ليزر"],
     [/تنظيف\s+أسنان/, "تنظيف أسنان"],
     [/استشارة\s+جراحية/, "استشارة جراحية"],
     [/متابعة/, "متابعة"],

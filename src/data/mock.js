@@ -6,8 +6,8 @@ export const PATIENTS = [
     age: 42,
     bloodType: "A+",
     status: "active",
-    lastVisit: "12 شوال 1446",
-    nextAppointment: "5 ذو القعدة 1446",
+    lastVisit: "15 نيسان 2026",
+    nextAppointment: "05 أيار 2026",
     allergies: ["البنسلين"],
     meds: [{ name: "ليزينوبريل 10 ملغم", note: "حبة يومياً — ضغط الدم" }],
     vitals: { bp: "118/76", hr: 72, spo2: 99 },
@@ -32,7 +32,7 @@ export const PATIENTS = [
     age: 29,
     bloodType: "B+",
     status: "inactive",
-    lastVisit: "14 محرم 1446",
+    lastVisit: "10 شباط 2026",
     nextAppointment: "—",
     allergies: ["المأكولات البحرية"],
     meds: [],
@@ -45,7 +45,7 @@ export const PATIENTS = [
     age: 61,
     bloodType: "AB-",
     status: "active",
-    lastVisit: "20 شوال 1446",
+    lastVisit: "23 نيسان 2026",
     nextAppointment: "اليوم 2:30 م",
     allergies: ["اللاتكس"],
     meds: [
@@ -61,7 +61,7 @@ export const PATIENTS = [
     age: 27,
     bloodType: "A-",
     status: "active",
-    lastVisit: "18 شوال 1446",
+    lastVisit: "21 نيسان 2026",
     nextAppointment: "غداً 10:00 ص",
     allergies: [],
     meds: [],
@@ -74,7 +74,7 @@ export const PATIENTS = [
     age: 53,
     bloodType: "O-",
     status: "active",
-    lastVisit: "22 شوال 1446",
+    lastVisit: "24 نيسان 2026",
     nextAppointment: "الخميس 9:30 ص",
     allergies: ["اليود"],
     meds: [{ name: "أملوديبين 5 ملغم", note: "حبة يومياً — ضغط الدم" }],
@@ -83,30 +83,30 @@ export const PATIENTS = [
 ];
 
 export const DOCTORS = [
-  { id: "D1", name: "د. أحمد المنصور", dept: "الباطنية", color: "blue" },
-  { id: "D2", name: "د. هدى الفهد", dept: "أمراض القلب", color: "green" },
-  { id: "D3", name: "د. خالد السعيد", dept: "الأعصاب", color: "purple" },
-  { id: "D4", name: "د. ريم العتيبي", dept: "طب الأطفال", color: "orange" },
+  { id: "D1", name: "د. أحمد المنصور", dept: "الباطنية", color: "blue", defaultDuration: 1 },
+  { id: "D2", name: "د. هدى الفهد", dept: "أمراض القلب", color: "green", defaultDuration: 1 },
+  { id: "D3", name: "د. خالد السعيد", dept: "الأعصاب", color: "purple", defaultDuration: 1.5 },
+  { id: "D4", name: "د. ريم العتيبي", dept: "طب الأطفال", color: "orange", defaultDuration: 0.5 },
 ];
 
 export const APPOINTMENTS = [
-  { id: "A1", day: 0, start: 9, duration: 1, patient: "محمد آل سعد", reason: "فحص عام", color: "blue", doctor: "D1" },
-  { id: "A2", day: 1, start: 9, duration: 1, patient: "سارة العتيبي", reason: "تنظيف أسنان", color: "green", doctor: "D2" },
-  { id: "A3", day: 1, start: 10, duration: 1.5, patient: "ميشيل العنزي", reason: "استشارة جراحية", color: "red", doctor: "D3", urgent: true },
-  { id: "A4", day: 2, start: 11, duration: 1, patient: "بسمة العمري", reason: "مراجعة نتائج تحاليل", color: "blue", doctor: "D1" },
-  { id: "A5", day: 3, start: 9, duration: 1, patient: "إيمان الصبيحي", reason: "جلسة علاج طبيعي", color: "purple", doctor: "D2" },
-  { id: "A6", day: 3, start: 13, duration: 1, patient: "ضيف الله القرني", reason: "فحص نظر", color: "green", doctor: "D4" },
-  { id: "A7", day: 4, start: 14, duration: 1, patient: "جمال الحربي", reason: "متابعة", color: "blue", doctor: "D1" },
-  { id: "A8", day: 0, start: 15, duration: 1, patient: "ستانلي القحطاني", reason: "أمراض القلب", color: "red", doctor: "D2" },
+  { id: "A1", day: 0, start: 9, duration: 1, patient: "محمد آل سعد", reason: "فحص عام", color: "blue", doctor: "D1", status: "confirmed" },
+  { id: "A2", day: 1, start: 9, duration: 1, patient: "سارة العتيبي", reason: "تنظيف أسنان", color: "green", doctor: "D2", status: "arrived" },
+  { id: "A3", day: 1, start: 10, duration: 1.5, patient: "ميشيل العنزي", reason: "استشارة جراحية", color: "red", doctor: "D3", urgent: true, status: "in_consultation" },
+  { id: "A4", day: 2, start: 11, duration: 1, patient: "بسمة العمري", reason: "مراجعة نتائج تحاليل", color: "blue", doctor: "D1", status: "completed" },
+  { id: "A5", day: 3, start: 9, duration: 1, patient: "إيمان الصبيحي", reason: "جلسة علاج طبيعي", color: "purple", doctor: "D2", status: "paid" },
+  { id: "A6", day: 3, start: 13, duration: 1, patient: "ضيف الله القرني", reason: "فحص نظر", color: "green", doctor: "D4", status: "scheduled" },
+  { id: "A7", day: 4, start: 14, duration: 1, patient: "جمال الحربي", reason: "متابعة", color: "blue", doctor: "D1", status: "confirmed" },
+  { id: "A8", day: 0, start: 15, duration: 1, patient: "ستانلي القحطاني", reason: "أمراض القلب", color: "red", doctor: "D2", status: "confirmed", overbooked: true },
 ];
 
 export const INVOICES = [
-  { id: "INV-2026-0118", patient: "سارة العتيبي", date: "22 شوال 1446", amount: 240.0, status: "paid" },
-  { id: "INV-2026-0117", patient: "خالد المحمدي", date: "22 شوال 1446", amount: 65.0, status: "paid" },
-  { id: "INV-2026-0116", patient: "عبدالله الزهراني", date: "21 شوال 1446", amount: 1280.5, status: "due" },
-  { id: "INV-2026-0115", patient: "ليلى الغامدي", date: "21 شوال 1446", amount: 95.0, status: "paid" },
-  { id: "INV-2026-0114", patient: "فيصل الحربي", date: "20 شوال 1446", amount: 320.0, status: "overdue" },
-  { id: "INV-2026-0113", patient: "نورة القحطاني", date: "19 شوال 1446", amount: 180.0, status: "paid" },
+  { id: "INV-2026-0118", patient: "سارة العتيبي", date: "24 نيسان 2026", amount: 240.0, status: "paid", appointmentId: "A2", patientId: "PT-8821" },
+  { id: "INV-2026-0117", patient: "خالد المحمدي", date: "24 نيسان 2026", amount: 65.0, status: "paid", patientId: "PT-9012" },
+  { id: "INV-2026-0116", patient: "عبدالله الزهراني", date: "23 نيسان 2026", amount: 1280.5, status: "due", patientId: "PT-1029" },
+  { id: "INV-2026-0115", patient: "ليلى الغامدي", date: "23 نيسان 2026", amount: 95.0, status: "paid", patientId: "PT-4471" },
+  { id: "INV-2026-0114", patient: "فيصل الحربي", date: "22 نيسان 2026", amount: 320.0, status: "overdue", patientId: "PT-3320" },
+  { id: "INV-2026-0113", patient: "نورة القحطاني", date: "21 نيسان 2026", amount: 180.0, status: "paid", patientId: "PT-7742" },
 ];
 
 export const INVENTORY = [
@@ -119,16 +119,16 @@ export const INVENTORY = [
 ];
 
 export const REVENUE = [
-  { month: "محرم", '2025': 92, '2026': 110 },
-  { month: "صفر", '2025': 88, '2026': 115 },
-  { month: "ربيع 1", '2025': 95, '2026': 122 },
-  { month: "ربيع 2", '2025': 100, '2026': 128 },
-  { month: "جمادى 1", '2025': 105, '2026': 132 },
-  { month: "جمادى 2", '2025': 108, '2026': 138 },
-  { month: "رجب", '2025': 115, '2026': 142 },
-  { month: "شعبان", '2025': 118, '2026': 148 },
-  { month: "رمضان", '2025': 120, '2026': 152 },
-  { month: "شوال", '2025': 122, '2026': 142 },
+  { month: "كانون الثاني", '2025': 92, '2026': 110 },
+  { month: "شباط", '2025': 88, '2026': 115 },
+  { month: "آذار", '2025': 95, '2026': 122 },
+  { month: "نيسان", '2025': 100, '2026': 128 },
+  { month: "أيار", '2025': 105, '2026': 132 },
+  { month: "حزيران", '2025': 108, '2026': 138 },
+  { month: "تموز", '2025': 115, '2026': 142 },
+  { month: "آب", '2025': 118, '2026': 148 },
+  { month: "أيلول", '2025': 120, '2026': 152 },
+  { month: "تشرين الأول", '2025': 122, '2026': 142 },
 ];
 
 export const STAFF = [
